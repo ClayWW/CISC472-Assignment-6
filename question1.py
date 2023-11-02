@@ -57,7 +57,6 @@ def eam_decrypt_and_verify(ctxt, mac, k1, k2, iv, mac_nonce):
         return None
 
 def poly(k2, ptxt):
-    #k2_bytes = bytes.fromhex(hex(k2).lstrip('0x'))
     poly = Poly1305.new(key=k2, cipher=AES)
     poly.update(ptxt)
     poly_mac = poly.hexdigest()
@@ -194,7 +193,9 @@ print("Decrypted Text: ", decrypted)
 
 assert plaintext == decrypted
 
+
 #Testing 1b
+
 plaintext = "Hello, world!"
 print("Original Plaintext:", plaintext)
 ctxt = mte_encrypt(plaintext, k1, k2, iv)
@@ -211,11 +212,22 @@ print("Decrypted Text: ", decrypted)
 
 assert plaintext == decrypted
 
+
 #Testing 1c
+
 plaintext = "Hello, world!"
 temp = k1
 k2 = k1
 k1 = temp
+print("Original Plaintext:", plaintext)
+ctxt, mac = etm_encrypt(plaintext, k1, k2, iv)
+decrypted = etm_decrypt_and_verify(ctxt, mac, k1, k2, iv)
+print("Decrypted Text: ", decrypted)
+
+assert plaintext == decrypted
+
+plaintext = "This is a really long message, I'm talking really long, like longer than 128 bits kind of long, I'm talking so long that it will really test my functions block splitting capabilities kind of long."
+
 print("Original Plaintext:", plaintext)
 ctxt, mac = etm_encrypt(plaintext, k1, k2, iv)
 decrypted = etm_decrypt_and_verify(ctxt, mac, k1, k2, iv)
