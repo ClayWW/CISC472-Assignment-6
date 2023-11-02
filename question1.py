@@ -4,6 +4,10 @@ from simon import SimonCipher
 from Crypto.Hash import Poly1305
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
+from Crypto.Hash.HMAC import HMAC
+from Crypto.Hash import SHA256
+from speck import SpeckCipher
+
 
 def eam_encrypt(ptxt, k1, k2, iv):
     ptxt_bytes = ptxt.encode()
@@ -61,6 +65,9 @@ def poly(k2, ptxt):
     mac_nonce = poly.nonce.hex()
     
     return poly_mac, mac_nonce
+
+
+#Testing 1a
 
 iv = get_random_bytes(16)
 k1 = get_random_bytes(16)
