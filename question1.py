@@ -4,7 +4,7 @@ from simon import SimonCipher
 from Crypto.Hash import Poly1305
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
-from Crypto.Hash import HMAC
+from Crypto.Hash import HMAC, CMAC
 from Crypto.Hash import SHA256
 from speck import SpeckCipher
 
@@ -56,20 +56,23 @@ def eam_decrypt_and_verify(ctxt, mac, k1, k2, iv, mac_nonce):
         print("MAC verification failed.")
         return None
 
+def poly(k2, ptxt):
+    #k2_bytes = bytes.fromhex(hex(k2).lstrip('0x'))
+    poly = Poly1305.new(key=k2, cipher=AES)
+    poly.update(ptxt)
+    poly_mac = poly.hexdigest()
+    mac_nonce = poly.nonce.hex()
+    
+    return poly_mac, mac_nonce
+
 def mte_encrypt(ptxt, k1, k2, iv):
     ptxt_bytes = ptxt.encode()
-    #print("Plaintext: ", ptxt_bytes.decode('utf-8'))
     iv_int = int.from_bytes(iv, byteorder='big')
     k1_int = int.from_bytes(k1, byteorder='big')
     hmac = HMAC.new(key=k2, msg=ptxt_bytes, digestmod=SHA256)
     mac = hmac.digest() #in bytes
-    #print("MAC: ", mac.hex())
-
 
     ptxt_mac = ptxt_bytes + mac
-    #print(ptxt_mac)
-
-    #print("Plaintext+MAC: ", ptxt_mac.hex())
 
     speck_cipher = SpeckCipher(k1_int, block_size=128, key_size=128, mode='CBC', init=iv_int)
     ctxt = b''
@@ -117,15 +120,56 @@ def mte_decrypt_and_verify(ctxt, k1, k2, iv):
         print("MAC verification failed.")
         return None
 
+def etm_encrypt(ptxt, k1, k2, iv):
+    ptxt_bytes = ptxt.encode()
+    iv_int = int.from_bytes(iv, byteorder='big')
+    k1_int = int.from_bytes(k1, byteorder='big')
 
-def poly(k2, ptxt):
-    #k2_bytes = bytes.fromhex(hex(k2).lstrip('0x'))
-    poly = Poly1305.new(key=k2, cipher=AES)
-    poly.update(ptxt)
-    poly_mac = poly.hexdigest()
-    mac_nonce = poly.nonce.hex()
-    
-    return poly_mac, mac_nonce
+    cipher = SimonCipher(k1_int, block_size=128, key_size=256, mode='CTR', init=iv_int)
+
+    ctxt = b''
+    for i in range(0, len(ptxt_bytes), 16):
+        block = ptxt_bytes[i:i+16]
+        if len(block) < 16:
+            block = pad(block, 16)
+        block_int = int.from_bytes(block, byteorder='big')
+        ctxt_block = cipher.encrypt(block_int)
+        ctxt += ctxt_block.to_bytes(16, byteorder='big')
+
+    cmac = CMAC.new(k2, ciphermod=AES)
+    cmac.update(ctxt)
+    mac = cmac.digest()
+
+    return ctxt, mac 
+
+def etm_decrypt_and_verify(ctxt, mac, k1, k2, iv):
+    cmac = CMAC.new(k2, ciphermod=AES)
+    cmac.update(ctxt)
+    try:
+        cmac.verify(mac)
+        print("MAC verification successful")
+
+        iv_int = int.from_bytes(iv, byteorder='big')
+        k1_int = int.from_bytes(k1, byteorder='big')
+        cipher = SimonCipher(k1_int, block_size=128, key_size=256, mode='CTR', init=iv_int)
+
+        ptxt = b''
+        for i in range(0, len(ctxt), 16):
+            block = ctxt[i:i+16]
+            block_int = int.from_bytes(block, byteorder='big')
+            ptxt_block = cipher.decrypt(block_int)
+            ptxt += ptxt_block.to_bytes(16, byteorder='big')
+        
+        try:
+            ptxt = unpad(ptxt, 16)
+        except ValueError as e:
+            raise ValueError("Incorrect padding or corrupted data") from e
+
+        return ptxt.decode()
+    except ValueError:
+        print("MAC verification failed.")
+        return None
+
 
 
 #Testing 1a
@@ -163,6 +207,18 @@ plaintext = "This is a really long message, I'm talking really long, like longer
 print("Original Plaintext:", plaintext)
 ctxt = mte_encrypt(plaintext, k1, k2, iv)
 decrypted = mte_decrypt_and_verify(ctxt, k1, k2, iv)
+print("Decrypted Text: ", decrypted)
+
+assert plaintext == decrypted
+
+#Testing 1c
+plaintext = "Hello, world!"
+temp = k1
+k2 = k1
+k1 = temp
+print("Original Plaintext:", plaintext)
+ctxt, mac = etm_encrypt(plaintext, k1, k2, iv)
+decrypted = etm_decrypt_and_verify(ctxt, mac, k1, k2, iv)
 print("Decrypted Text: ", decrypted)
 
 assert plaintext == decrypted
