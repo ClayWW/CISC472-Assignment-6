@@ -5,7 +5,6 @@ from Crypto.Hash import Poly1305
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 
-block_size = 128
 '''
 def pad(input, block_size):
     padding_length = block_size - (len(input) % block_size)
@@ -18,17 +17,17 @@ def unpad(input):
 def eam_encrypt(plaintext, k1, k2, iv):
     iv_int = int.from_bytes(iv, byteorder='big')
     k1_int = int.from_bytes(k1, byteorder='big')
-    cipher = SimonCipher(k1_int, block_size=block_size, key_size=128, init=iv_int, mode='CTR', counter=1)
+    cipher = SimonCipher(k1_int, block_size=128, key_size=128, init=iv_int, mode='CTR', counter=1)
     ctxt = b''
-    for i in range(0, len(plaintext), block_size):
-        block = plaintext[i:i+block_size]
-        if len(block) < block_size:
-            block = pad(block, block_size)
+    for i in range(0, len(plaintext), 16):
+        block = plaintext[i:i+16]
+        if len(block) < 16:
+            block = pad(block, 16)
         block_int = int.from_bytes(block, byteorder='big')
         ctxt_block = cipher.encrypt(block_int)
-        ctxt += ctxt_block.to_bytes(block_size, byteorder='big')
+        ctxt += ctxt_block.to_bytes(16, byteorder='big')
     ciphertext_int = int.from_bytes(ctxt, byteorder='big')
-
+    
     #k2 = bytes.fromhex(hex(k2).lstrip("0x"))
     poly_cipher = Poly1305.new(key=k2, cipher=AES)
     poly_cipher.update(plaintext)
@@ -57,15 +56,15 @@ def eam_encrypt(plaintext, k1, k2, iv):
 def eam_decrypt_and_verify(ctxt, mac, k1, k2, iv, mac_nonce):
     iv_int = int.from_bytes(iv, byteorder='big')
     k1_int = int.from_bytes(k1, byteorder='big')
-    cipher = SimonCipher(k1_int, block_size=block_size, key_size=128, init=iv_int, mode='CTR', counter=1)
+    cipher = SimonCipher(k1_int, block_size=128, key_size=128, init=iv_int, mode='CTR', counter=1)
     ctxt_bytes = ctxt.to_bytes((ctxt.bit_length() + 7) // 8, byteorder='big')
     ptxt = b''
-    for i in range(0, len(ctxt_bytes), block_size):
-        block = ctxt_bytes[i:i+block_size]
+    for i in range(0, len(ctxt_bytes), 16):
+        block = ctxt_bytes[i:i+16]
         block_int = int.from_bytes(block, byteorder='big')
         ptxt_block = cipher.decrypt(block_int)
-        ptxt += ptxt_block.to_bytes(block_size, byteorder='big')
-    ptxt = unpad(ptxt, block_size).decode()
+        ptxt += ptxt_block.to_bytes(16, byteorder='big')
+    ptxt = unpad(ptxt, 16).decode()
 
     #k2_bytes = bytes.fromhex(hex(k2).lstrip("0x"))
     mac_nonce_bytes = bytes.fromhex(mac_nonce)
@@ -97,6 +96,8 @@ def eam_decrypt_and_verify(ctxt, mac, k1, k2, iv, mac_nonce):
 
     return plaintext
     '''
+
+
 iv = get_random_bytes(16)
 k1 = get_random_bytes(16)
 k2 = get_random_bytes(32)
@@ -106,13 +107,6 @@ print("Original Plaintext:", plaintext)
 ctxt, mac, mac_nonce = eam_encrypt(plaintext, k1, k2, iv)
 decrypted = eam_decrypt_and_verify(ctxt, mac, k1, k2, iv, mac_nonce)
 print("Decrypted Text:", decrypted)
-'''
-print("Original plaintext:", plaintext)
-print("Decrypted text:", decrypted)
-
-print("\nOriginal ciphertext:", ctxt)
-print("Decrypted ciphertext before decryption:", bytes_to_int(ctxt))
-'''
 
 #assert plaintext == decrypted
 
