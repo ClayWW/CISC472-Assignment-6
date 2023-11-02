@@ -49,6 +49,7 @@ def eam_decrypt_and_verify(ctxt, mac, k1, k2, iv, mac_nonce):
         print("MAC verification successful.")
     else:
         print("MAC verification failed.")
+        ptxt = None
 
     return ptxt
 
