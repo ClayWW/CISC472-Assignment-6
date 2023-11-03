@@ -9,6 +9,11 @@ from Crypto.Hash import SHA256
 from speck import SpeckCipher
 
 
+# Encrypts a plaintext using Simon cipher in CTR mode.
+# It first encodes the plaintext, calculates integer values for the IV and key,
+# then encrypts the plaintext in 16-byte blocks, padding the last block if necessary.
+# It also generates a MAC (Message Authentication Code) using Poly1305 and returns the encrypted text,
+# the MAC, and a nonce used for the MAC.
 def eam_encrypt(ptxt, k1, k2, iv):
     ptxt_bytes = ptxt.encode()
     iv_int = int.from_bytes(iv, byteorder='big')
@@ -28,6 +33,9 @@ def eam_encrypt(ptxt, k1, k2, iv):
 
     return ctxt_int, mac, mac_nonce
 
+# Decrypts ciphertext and verifies its integrity using the provided MAC and nonce.
+# It uses the Simon cipher in CTR mode to decrypt the data and Poly1305 to verify the MAC.
+# It returns the decrypted plaintext if the MAC is verified, otherwise, it returns None.
 def eam_decrypt_and_verify(ctxt, mac, k1, k2, iv, mac_nonce):
     iv_int = int.from_bytes(iv, byteorder='big')
     k1_int = int.from_bytes(k1, byteorder='big')
@@ -56,6 +64,8 @@ def eam_decrypt_and_verify(ctxt, mac, k1, k2, iv, mac_nonce):
         print("MAC verification failed.")
         return None
 
+# Generates a MAC using the Poly1305 algorithm for a given plaintext and key.
+# It returns the MAC and the nonce used during the MAC computation.
 def poly(k2, ptxt):
     poly = Poly1305.new(key=k2, cipher=AES)
     poly.update(ptxt)
@@ -64,6 +74,10 @@ def poly(k2, ptxt):
     
     return poly_mac, mac_nonce
 
+# Encrypts plaintext using Speck cipher in CBC mode and HMAC for integrity.
+# It first encodes the plaintext, calculates integer values for the IV and key,
+# generates an HMAC for the plaintext, appends it to the plaintext, and encrypts everything in 16-byte blocks.
+# The last block is padded if necessary. Returns the encrypted text as an integer.
 def mte_encrypt(ptxt, k1, k2, iv):
     ptxt_bytes = ptxt.encode()
     iv_int = int.from_bytes(iv, byteorder='big')
@@ -86,6 +100,10 @@ def mte_encrypt(ptxt, k1, k2, iv):
     
     return ctxt_int
 
+# Decrypts ciphertext encrypted by mte_encrypt and verifies HMAC.
+# Uses Speck cipher in CBC mode for decryption and HMAC with SHA256 for MAC verification.
+# It decodes the ciphertext from integer to bytes, decrypts it block by block, unpads it,
+# and then verifies the HMAC. Returns the plaintext if HMAC is valid, else returns None.
 def mte_decrypt_and_verify(ctxt, k1, k2, iv):
     iv_int = int.from_bytes(iv, byteorder='big')
     k1_int = int.from_bytes(k1, byteorder='big')
@@ -119,6 +137,9 @@ def mte_decrypt_and_verify(ctxt, k1, k2, iv):
         print("MAC verification failed.")
         return None
 
+# Encrypts plaintext using Simon cipher in CTR mode and CMAC for integrity.
+# It encodes the plaintext to bytes, encrypts it in 16-byte blocks with necessary padding,
+# and then generates a CMAC. Returns the encrypted text and the CMAC.
 def etm_encrypt(ptxt, k1, k2, iv):
     ptxt_bytes = ptxt.encode()
     iv_int = int.from_bytes(iv, byteorder='big')
@@ -141,6 +162,9 @@ def etm_encrypt(ptxt, k1, k2, iv):
 
     return ctxt, mac 
 
+# Decrypts ciphertext encrypted by etm_encrypt and verifies CMAC.
+# It first verifies the CMAC, then decrypts the ciphertext using Simon cipher in CTR mode.
+# If CMAC is valid, it unpads and decodes the plaintext and returns it, otherwise returns None.
 def etm_decrypt_and_verify(ctxt, mac, k1, k2, iv):
     cmac = CMAC.new(k2, ciphermod=AES)
     cmac.update(ctxt)
