@@ -44,32 +44,7 @@ class Question2:
     def __init__(self, k1, k2):
         self.key1 = k1
         self.key2 = k2
-    '''
-    def gf_mult(self, x, y):
-        primitive = 0b100011011
-        result = 0
-        for i in range(64):
-            if y & (1 << i):
-                result ^= x << 1
-            if result & (1 << 64):
-                result >>= 1
-                result ^= primitive
-            x <<= 1
-            if x & (1 << 64):
-                x >>= 1
-                x ^= primitive
-        return result & ((1 << 64) - 1)
-    
-    def gf_mult(self, x, y):
-        result = 0
-        for i in range(64):
-            if y & (1 << i):
-                result ^= x
-            if x & (1 << 63):  # Check if x needs reduction
-                x ^= (1 << 63)  # Reduction for polynomial X^64 + 1 is just removing the bit
-            x <<= 1
-        return result
-    '''
+
     def gf_mult(self, x, y):
         result = 0
         for i in range(64):
@@ -92,26 +67,21 @@ class Question2:
 
         for i in range(0, len(associated_bytes), 8):
             associated_block = associated_bytes[i:i+8]
-            #associated_block_int = int.from_bytes(associated_block, byteorder='big')
             if len(associated_block) < 8:
                 associated_block = pad(associated_block, 8)
             associated_blocks += 1
-            #state ^= associated_block_int
             state = self.gf_mult(state, bytes_to_long(associated_block))
         
 
         
         for i in range(0, len(ptxt_bytes), 8):
             ptxt_block = ptxt_bytes[i:i+8]
-            #ptxt_block_int = int.from_bytes(ptxt_block, byteorder='big')
             if len(ptxt_block) < 8:
                 ptxt_block = pad(ptxt_block, 8)
             ptxt_blocks += 1
-            #state ^= ptxt_block_int
             state = self.gf_mult(state, bytes_to_long(ptxt_block))
         
         ctxt_block = (associated_blocks << 32) | ptxt_blocks
-        #state ^= ctxt_block
         state = self.gf_mult(state, ctxt_block)
         return state
 
@@ -119,9 +89,7 @@ class Question2:
         nonce_int = int.from_bytes(nonce, byteorder='big')
         input_val = nonce_int ^ self.bhash(associated, plaintext)
         input_val_bytes = input_val.to_bytes((input_val.bit_length() + 7) //8, byteorder='big')
-        #print(input_val_bytes)
         tag = self.simon_ctr_encrypt(self.key2, input_val_bytes, b'\x00'*16)
-        #print(tag)
 
         return tag
 
