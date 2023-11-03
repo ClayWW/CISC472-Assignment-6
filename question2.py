@@ -76,9 +76,9 @@ class Question2:
         nonce_int = int.from_bytes(nonce, byteorder='big')
         input_val = nonce_int ^ self.bhash(associated, plaintext)
         input_val_bytes = input_val.to_bytes((input_val.bit_length() + 7) //8, byteorder='big')
-        print(input_val_bytes)
+        #print(input_val_bytes)
         tag = self.simon_ctr_encrypt(self.key2, input_val_bytes, b'\x00'*16)
-        print(tag)
+        #print(tag)
 
         return tag
 
@@ -107,3 +107,32 @@ q2_instance = Question2(k1, k2)
 plaintext = "Hello, world!"
 associated_data = b"header"
 tag = q2_instance.cw_mac(associated_data, plaintext, nonce)
+
+#bhash testing
+k2 = get_random_bytes(16)
+q2_instance_2 = Question2(k1, k2)
+
+hash1 = q2_instance_2.bhash(associated_data, plaintext)
+hash2 = q2_instance_2.bhash(associated_data, plaintext)
+
+assert hash1 == hash2
+
+plaintext = "Hello World!"
+hash_changed = q2_instance_2.bhash(associated_data, plaintext)
+assert hash1 != hash_changed
+
+#cw_mac testing
+k1 = get_random_bytes(16)
+k2 = get_random_bytes(16)
+associated_data = b"header"
+plaintext = "Hello, world!"
+nonce = get_random_bytes(8)
+q2_instance_2 = Question2(k1, k2)
+
+tag = q2_instance_2.cw_mac(plaintext, associated_data, nonce)
+new_tag = q2_instance_2.cw_mac(plaintext, associated_data, nonce)
+assert tag == new_tag
+
+new_nonce = get_random_bytes(8)
+diff_tag = q2_instance_2.cw_mac(plaintext, associated_data, new_nonce)
+assert tag != diff_tag
