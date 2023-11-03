@@ -122,9 +122,9 @@ def mte_decrypt_and_verify(ctxt, k1, k2, iv):
         raise ValueError("Incorrect padding or corrupted data") from e
 
     ptxt = ptxt_mac[:-32]
-    print("Plaintext: ", ptxt)
+    #print("Plaintext: ", ptxt)
     mac = ptxt_mac[-32:]
-    print("MAC: ", mac)
+    #print("MAC: ", mac)
     
 
     hmac = HMAC.new(k2, digestmod=SHA256)

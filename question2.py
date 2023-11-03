@@ -5,6 +5,11 @@ from Crypto.Util.number import long_to_bytes, bytes_to_long
 
 class Question2:
     
+    # Static method for encrypting data with the Simon cipher in CTR mode
+    # The method takes plaintext (ptxt), a key, and a nonce as inputs.
+    # It encodes the plaintext into bytes, sets up the cipher with the key and nonce,
+    # and encrypts the data block by block, padding the last block if needed.
+    # Returns the ciphertext as an integer.
     @staticmethod
     def simon_ctr_encrypt(ptxt, key, nonce):
         ptxt_bytes = ptxt.encode() if not isinstance(ptxt, bytes) else ptxt
@@ -23,6 +28,10 @@ class Question2:
 
         return ctxt_int
     
+    # Static method for decrypting data with the Simon cipher in CTR mode
+    # The method takes ciphertext (ctxt), a key, and a nonce as inputs.
+    # It sets up the cipher with the key and nonce and decrypts the data block by block.
+    # If the padding is correct, it returns the plaintext. If not, it raises a ValueError.
     @staticmethod
     def simon_ctr_decrypt(ctxt, key, nonce):
         nonce_int = int.from_bytes(nonce, byteorder='big')
@@ -41,10 +50,13 @@ class Question2:
         except ValueError as e:
             raise ValueError("Incorrect padding or corrupted data") from e
 
+    # Constructor for initializing an instance with two keys, k1 and k2
     def __init__(self, k1, k2):
         self.key1 = k1
         self.key2 = k2
 
+    # Method for performing multiplication in a Galois Field (GF), uses the irreducible polynomial x^64 + 1
+    # It takes two 64-bit integers, x and y, as inputs and returns their product.
     def gf_mult(self, x, y):
         result = 0
         for i in range(64):
@@ -57,6 +69,10 @@ class Question2:
                 x <<= 1
         return result
 
+    # Method for creating a hash using the Simon cipher
+    # It takes associated data and plaintext as inputs, encrypts an initial state,
+    # and then processes the associated data and plaintext block by block using GF multiplication.
+    # Finally, it combines the block counts and performs a final GF multiplication to produce the hash.
     def bhash(self, associated, ptxt):
         state= self.simon_ctr_encrypt(self.key2, b'\x00'*16, b'\x00'*16)
         associated_blocks = 0
@@ -85,6 +101,10 @@ class Question2:
         state = self.gf_mult(state, ctxt_block)
         return state
 
+    # Method for generating a Carter-Wegman MAC
+    # It takes plaintext, associated data, and a nonce as inputs.
+    # It calculates a hash of the associated data and plaintext, XORs it with the nonce,
+    # and then encrypts the result using Simon cipher in CTR mode to produce the MAC.
     def cw_mac(self, plaintext, associated, nonce):
         nonce_int = int.from_bytes(nonce, byteorder='big')
         input_val = nonce_int ^ self.bhash(associated, plaintext)
@@ -92,6 +112,15 @@ class Question2:
         tag = self.simon_ctr_encrypt(self.key2, input_val_bytes, b'\x00'*16)
 
         return tag
+    
+# ANSWER TO QUESTION IN 2C
+'''
+The first definition is better because it combines the hash and encryption in a way that does not allow an attacker
+to analyze the hash output in isolation which takes full advantage of the ciphers strength to protect the integrity
+of the message. But in contrast, the second definition has a weaker security model because the output of the hash function
+can be isolated and an attacker can take avdvantage of this if they can obtain multiple tags. Therefore, the first
+definition is more cryptographically secure.
+'''
 
 
 #Testing 2a
